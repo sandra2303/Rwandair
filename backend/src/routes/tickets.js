@@ -1,0 +1,10 @@
+const router = require('express').Router();
+const { generateTickets, getTickets, checkIn, validateTicket, getAvailableSeats, addBaggage } = require('../controllers/ticketController');
+const { authenticate, authorize } = require('../middleware/auth');
+router.post('/generate/:booking_id', authenticate, generateTickets);
+router.get('/booking/:booking_id', authenticate, getTickets);
+router.post('/checkin/:booking_id', authenticate, checkIn);
+router.get('/validate/:ticket_number', authenticate, validateTicket);
+router.get('/seats/:flight_id', authenticate, getAvailableSeats);
+router.patch('/baggage/:passenger_id', authenticate, addBaggage);
+module.exports = router;

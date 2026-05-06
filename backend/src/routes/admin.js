@@ -1,0 +1,10 @@
+const router = require('express').Router();
+const { getDashboard, getAllUsers, updateUserStatus, updateUserRole, getManifest } = require('../controllers/adminController');
+const { authenticate, authorize } = require('../middleware/auth');
+router.use(authenticate, authorize('admin'));
+router.get('/dashboard', getDashboard);
+router.get('/users', getAllUsers);
+router.patch('/users/:id/status', updateUserStatus);
+router.patch('/users/:id/role', updateUserRole);
+router.get('/flights/:flight_id/manifest', getManifest);
+module.exports = router;

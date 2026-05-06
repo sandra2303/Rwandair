@@ -1,0 +1,11 @@
+const router = require('express').Router();
+const { searchFlights, getAllFlights, getFlightById, createFlight, updateFlightStatus, getAirports, getAircraft } = require('../controllers/flightController');
+const { authenticate, authorize } = require('../middleware/auth');
+router.get('/airports', getAirports);
+router.get('/aircraft', getAircraft);
+router.get('/search', searchFlights);
+router.get('/', getAllFlights);
+router.get('/:id', getFlightById);
+router.post('/', authenticate, authorize('admin'), createFlight);
+router.patch('/:id/status', authenticate, authorize('admin'), updateFlightStatus);
+module.exports = router;
