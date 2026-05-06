@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { bookingAPI, ticketAPI } from '../services/api';
+import { bookingAPI, ticketAPI, refundAPI, enhancedAPI } from '../services/api';
 import { toast } from 'react-toastify';
 
 const BookingDetail = () => {
@@ -21,6 +21,25 @@ const BookingDetail = () => {
       setBooking(r.data);
       toast.success('Booking cancelled');
     } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+  };
+
+  const handleRefund = async () => {
+    if (!window.confirm('Request a refund for this booking? (80% refund policy applies)')) return;
+    try {
+      const { data } = await refundAPI.request(booking.id, 'Passenger requested refund');
+      toast.success(data.message);
+      const r = await bookingAPI.getById(id);
+      setBooking(r.data);
+    } catch (err) { toast.error(err.response?.data?.message || 'Refund request failed'); }
+  };
+
+  const handleUpgrade = async (newClass) => {
+    try {
+      const { data } = await enhancedAPI.upgradeSeat(booking.id, newClass);
+      toast.success(`Upgraded to ${newClass}! Extra cost: $${data.upgrade_cost}`);
+      const r = await bookingAPI.getById(id);
+      setBooking(r.data);
+    } catch (err) { toast.error(err.response?.data?.message || 'Upgrade failed'); }
   };
 
   if (loading) return <div style={s.loading}>Loading...</div>;
@@ -120,8 +139,16 @@ const BookingDetail = () => {
       </div>
 
       {['pending','confirmed'].includes(booking.status) && (
-        <div style={{ textAlign: 'right' }}>
+        <div style={{ textAlign: 'right', display: 'flex', gap: '1rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          {booking.status === 'confirmed' && booking.cabin_class === 'economy' && isPaid && !booking.checked_in && (
+            <button onClick={() => handleUpgrade('business')} style={{ ...s.cancelBtn, color: '#6f42c1', borderColor: '#6f42c1' }}>Upgrade to Business</button>
+          )}
           <button onClick={handleCancel} style={s.cancelBtn}>Cancel Booking</button>
+        </div>
+      )}
+      {booking.status === 'cancelled' && isPaid && booking.payment_status !== 'refunded' && (
+        <div style={{ textAlign: 'right' }}>
+          <button onClick={handleRefund} style={{ ...s.cancelBtn, color: '#28a745', borderColor: '#28a745' }}>Request Refund (80%)</button>
         </div>
       )}
     </div>

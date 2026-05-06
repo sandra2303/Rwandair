@@ -19,6 +19,10 @@ import ValidateTicket from './pages/ValidateTicket';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 import AgentPortal from './pages/AgentPortal';
+import { ForgotPassword, ResetPassword } from './pages/PasswordPages';
+import MyRefunds from './pages/MyRefunds';
+import RevenueCharts from './pages/RevenueCharts';
+import Notifications from './components/Notifications';
 
 function App() {
   return (
@@ -29,6 +33,8 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/flights" element={<Flights />} />
           <Route path="/book" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
           <Route path="/payment" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
@@ -38,7 +44,10 @@ function App() {
           <Route path="/checkin/:booking_id" element={<ProtectedRoute><CheckIn /></ProtectedRoute>} />
           <Route path="/validate" element={<ProtectedRoute roles={['admin','agent']}><ValidateTicket /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/refunds" element={<ProtectedRoute><MyRefunds /></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/revenue" element={<ProtectedRoute roles={['admin']}><RevenueCharts /></ProtectedRoute>} />
           <Route path="/agent" element={<ProtectedRoute roles={['agent','admin']}><AgentPortal /></ProtectedRoute>} />
         </Routes>
         <ToastContainer position="top-right" autoClose={3000} />

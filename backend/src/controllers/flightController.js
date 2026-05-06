@@ -81,10 +81,17 @@ const createFlight = async (req, res) => {
   }
 };
 
+const { notifyFlightStatus } = require('./enhancedController');
+
 const updateFlightStatus = async (req, res) => {
   const { status } = req.body;
   try {
     const result = await pool.query('UPDATE flights SET status=$1,updated_at=NOW() WHERE id=$2 RETURNING *', [status, req.params.id]);
+    // Notify passengers if flight is delayed or cancelled
+    if (['cancelled','delayed'].includes(status)) {
+      const msg = status === 'cancelled' ? 'Your flight has been cancelled. Please contact us for rebooking or refund.' : 'Your flight has been delayed. Please check the updated departure time.';
+      notifyFlightStatus(req.params.id, status, msg).catch(console.error);
+    }
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });

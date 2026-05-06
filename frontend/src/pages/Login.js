@@ -54,7 +54,7 @@ const Login = () => {
             <button onClick={() => setForm({ email: 'john@example.com', password: 'Pass@2024' })} style={s.demoBtn}>Passenger</button>
           </div>
         </div>
-        <p style={s.footer}>No account? <Link to="/register" style={s.link}>Register</Link></p>
+        <p style={s.footer}>No account? <Link to="/register" style={s.link}>Register</Link> | <Link to="/forgot-password" style={s.link}>Forgot Password?</Link></p>
       </div>
     </div>
   );

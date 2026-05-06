@@ -68,4 +68,25 @@ export const adminAPI = {
   getManifest: (flightId) => API.get(`/admin/flights/${flightId}/manifest`),
 };
 
+export const passwordAPI = {
+  forgot: (email) => API.post('/password/forgot', { email }),
+  reset: (token, password) => API.post('/password/reset', { token, password }),
+  change: (current_password, new_password) => API.post('/password/change', { current_password, new_password }),
+};
+
+export const refundAPI = {
+  request: (booking_id, reason) => API.post('/refunds/request', { booking_id, reason }),
+  getMy: () => API.get('/refunds/my'),
+  getAll: () => API.get('/refunds/all'),
+  process: (refund_id, status) => API.patch('/refunds/process', { refund_id, status }),
+};
+
+export const enhancedAPI = {
+  modifyBooking: (booking_id, data) => API.patch(`/enhanced/bookings/${booking_id}/modify`, data),
+  upgradeSeat: (booking_id, new_cabin_class) => API.patch(`/enhanced/bookings/${booking_id}/upgrade`, { new_cabin_class }),
+  getNotifications: () => API.get('/enhanced/notifications'),
+  markRead: (id) => API.patch(`/enhanced/notifications/${id}/read`),
+  getRevenueStats: () => API.get('/enhanced/revenue/stats'),
+};
+
 export default API;

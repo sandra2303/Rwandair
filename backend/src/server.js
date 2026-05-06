@@ -20,6 +20,9 @@ app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/tickets', require('./routes/tickets'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/password', require('./routes/password'));
+app.use('/api/refunds', require('./routes/refunds'));
+app.use('/api/enhanced', require('./routes/enhanced'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'RwandAir API running', time: new Date() }));
 

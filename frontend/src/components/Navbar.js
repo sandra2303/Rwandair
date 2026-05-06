@@ -1,12 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { enhancedAPI } from '../services/api';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      enhancedAPI.getNotifications().then(r => setUnread(r.data.filter(n => !n.is_read).length)).catch(() => {});
+    }
+  }, [isAuthenticated]);
 
   const handleLogout = () => { logout(); navigate('/'); setOpen(false); };
   const active = (path) => location.pathname === path ? styles.linkActive : {};
@@ -18,6 +26,12 @@ const Navbar = () => {
         <Link to="/" style={{ ...styles.link, ...active('/') }}>Home</Link>
         <Link to="/flights" style={{ ...styles.link, ...active('/flights') }}>Flights</Link>
         {isAuthenticated && <Link to="/bookings" style={{ ...styles.link, ...active('/bookings') }}>My Bookings</Link>}
+        {isAuthenticated && (
+          <Link to="/notifications" style={{ ...styles.link, ...active('/notifications'), position: 'relative' }}>
+            Notifications
+            {unread > 0 && <span style={styles.notifBadge}>{unread}</span>}
+          </Link>
+        )}
         {user?.role === 'admin' && <Link to="/admin" style={{ ...styles.link, ...active('/admin') }}>Admin</Link>}
         {(user?.role === 'agent' || user?.role === 'admin') && (
           <>
@@ -42,7 +56,12 @@ const Navbar = () => {
                 </div>
                 <Link to="/profile" onClick={() => setOpen(false)} style={styles.dropItem}>My Profile</Link>
                 <Link to="/bookings" onClick={() => setOpen(false)} style={styles.dropItem}>My Bookings</Link>
+                <Link to="/refunds" onClick={() => setOpen(false)} style={styles.dropItem}>My Refunds</Link>
+                <Link to="/notifications" onClick={() => setOpen(false)} style={styles.dropItem}>
+                  Notifications {unread > 0 && <span style={styles.dropBadge}>{unread}</span>}
+                </Link>
                 {user?.role === 'admin' && <Link to="/admin" onClick={() => setOpen(false)} style={styles.dropItem}>Admin Dashboard</Link>}
+                {user?.role === 'admin' && <Link to="/admin/revenue" onClick={() => setOpen(false)} style={styles.dropItem}>Revenue Charts</Link>}
                 <div style={styles.dropDivider} />
                 <button onClick={handleLogout} style={styles.dropLogout}>Sign Out</button>
               </div>
@@ -65,6 +84,7 @@ const styles = {
   links: { display: 'flex', alignItems: 'center', gap: '0.25rem' },
   link: { color: 'rgba(255,255,255,0.85)', textDecoration: 'none', padding: '0.4rem 0.9rem', borderRadius: '6px', fontSize: '0.9rem' },
   linkActive: { background: 'rgba(255,255,255,0.2)', color: '#fff', fontWeight: '600' },
+  notifBadge: { background: '#e31837', color: '#fff', borderRadius: '50%', padding: '0.1rem 0.4rem', fontSize: '0.7rem', marginLeft: '0.3rem', fontWeight: 'bold' },
   right: { display: 'flex', alignItems: 'center' },
   authBtns: { display: 'flex', gap: '0.75rem' },
   loginBtn: { color: '#fff', textDecoration: 'none', padding: '0.4rem 1rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.4)', fontSize: '0.9rem' },
@@ -76,6 +96,7 @@ const styles = {
   dropHeader: { padding: '1rem', background: '#f8faff', borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   roleBadge: { color: '#fff', padding: '0.15rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', textTransform: 'capitalize' },
   dropItem: { display: 'block', padding: '0.75rem 1rem', color: '#333', textDecoration: 'none', fontSize: '0.9rem' },
+  dropBadge: { background: '#e31837', color: '#fff', borderRadius: '50%', padding: '0.1rem 0.4rem', fontSize: '0.7rem', marginLeft: '0.3rem' },
   dropDivider: { height: '1px', background: '#e0e0e0' },
   dropLogout: { display: 'block', width: '100%', padding: '0.75rem 1rem', color: '#dc3545', background: 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.9rem' },
 };
