@@ -79,7 +79,11 @@ const getUserBookings = async (req, res) => {
 
 const getBookingById = async (req, res) => {
   try {
-    const bookingRes = await pool.query(`
+    // Try by booking_reference first, then by UUID
+    const id = req.params.id;
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+    const query = `
       SELECT b.*, f.flight_number, f.departure_time, f.arrival_time, f.status as flight_status,
         a1.code as origin_code, a1.city as origin_city, a1.name as origin_name,
         a2.code as dest_code, a2.city as dest_city, a2.name as dest_name,
@@ -89,8 +93,9 @@ const getBookingById = async (req, res) => {
       JOIN airports a1 ON f.origin_airport_id=a1.id
       JOIN airports a2 ON f.destination_airport_id=a2.id
       JOIN aircraft ac ON f.aircraft_id=ac.id
-      WHERE b.id=$1 OR b.booking_reference=$1`, [req.params.id]);
+      WHERE ${isUUID ? 'b.id=$1' : 'b.booking_reference=$1'}`;
 
+    const bookingRes = await pool.query(query, [id]);
     if (!bookingRes.rows[0]) return res.status(404).json({ message: 'Booking not found' });
     const booking = bookingRes.rows[0];
     if (req.user.role === 'passenger' && booking.user_id !== req.user.id) return res.status(403).json({ message: 'Access denied' });
@@ -99,7 +104,7 @@ const getBookingById = async (req, res) => {
     const payment = await pool.query('SELECT * FROM payments WHERE booking_id=$1 ORDER BY created_at DESC LIMIT 1', [booking.id]);
     res.json({ ...booking, passengers: passengers.rows, payment: payment.rows[0] || null });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
