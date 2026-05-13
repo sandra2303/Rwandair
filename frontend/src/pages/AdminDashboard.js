@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { adminAPI, flightAPI, bookingAPI } from '../services/api';
+import { adminAPI, flightAPI, bookingAPI, refundAPI } from '../services/api';
 import { toast } from 'react-toastify';
 
 const AdminDashboard = () => {
@@ -8,16 +8,19 @@ const AdminDashboard = () => {
   const [flights, setFlights] = useState([]);
   const [users, setUsers] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [refunds, setRefunds] = useState([]);
   const [airports, setAirports] = useState([]);
   const [aircraft, setAircraft] = useState([]);
   const [tab, setTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [showFlightForm, setShowFlightForm] = useState(false);
+  const [flightSearch, setFlightSearch] = useState('');
+  const [flightStatusFilter, setFlightStatusFilter] = useState('all');
   const [flightForm, setFlightForm] = useState({ flight_number: '', origin_airport_id: '', destination_airport_id: '', aircraft_id: '', departure_time: '', arrival_time: '', economy_price: '', business_price: '', first_class_price: 0, available_economy_seats: '', available_business_seats: '', available_first_class_seats: 0 });
 
   useEffect(() => {
-    Promise.all([adminAPI.getDashboard(), flightAPI.getAll(), adminAPI.getUsers(), flightAPI.getAirports(), flightAPI.getAircraft(), bookingAPI.getAll()])
-      .then(([dash, fl, us, ap, ac, bk]) => { setStats(dash.data); setFlights(fl.data); setUsers(us.data); setAirports(ap.data); setAircraft(ac.data); setBookings(bk.data); })
+    Promise.all([adminAPI.getDashboard(), flightAPI.getAll(), adminAPI.getUsers(), flightAPI.getAirports(), flightAPI.getAircraft(), bookingAPI.getAll(), refundAPI.getAll()])
+      .then(([dash, fl, us, ap, ac, bk, rf]) => { setStats(dash.data); setFlights(fl.data); setUsers(us.data); setAirports(ap.data); setAircraft(ac.data); setBookings(bk.data); setRefunds(rf.data); })
       .catch(() => toast.error('Failed to load dashboard'))
       .finally(() => setLoading(false));
   }, []);
@@ -48,6 +51,14 @@ const AdminDashboard = () => {
     } catch { toast.error('Failed'); }
   };
 
+  const handleProcessRefund = async (refund_id, status) => {
+    try {
+      await refundAPI.process(refund_id, status);
+      setRefunds(refunds.map(r => r.id === refund_id ? { ...r, status, processed_at: new Date() } : r));
+      toast.success(`Refund ${status}!`);
+    } catch { toast.error('Failed to process refund'); }
+  };
+
   if (loading) return <div style={s.loading}>Loading dashboard...</div>;
 
   return (
@@ -58,7 +69,7 @@ const AdminDashboard = () => {
       </div>
 
       <div style={s.tabs}>
-        {['overview','flights','users','bookings'].map(t => (
+        {['overview','flights','users','bookings','refunds'].map(t => (
           <button key={t} onClick={() => setTab(t)} style={{ ...s.tab, ...(tab === t ? s.tabActive : {}) }}>
             {t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
@@ -105,8 +116,34 @@ const AdminDashboard = () => {
       {tab === 'flights' && (
         <div style={s.section}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={s.sectionTitle}>Flight Management</h3>
+            <h3 style={s.sectionTitle}>Flight Management ({flights.length} total)</h3>
             <button onClick={() => setShowFlightForm(!showFlightForm)} style={s.addBtn}>+ Add Flight</button>
+          </div>
+
+          {/* Search and Filter Bar */}
+          <div style={s.searchBar}>
+            <input
+              type="text"
+              placeholder="Search by flight number or route (e.g. WB101 or KGL)"
+              value={flightSearch}
+              onChange={e => setFlightSearch(e.target.value)}
+              style={s.searchInput}
+            />
+            <select value={flightStatusFilter} onChange={e => setFlightStatusFilter(e.target.value)} style={s.filterSelect}>
+              <option value="all">All Status</option>
+              {['scheduled','boarding','departed','arrived','cancelled','delayed'].map(st => (
+                <option key={st} value={st}>{st.charAt(0).toUpperCase() + st.slice(1)}</option>
+              ))}
+            </select>
+            <button onClick={() => { setFlightSearch(''); setFlightStatusFilter('all'); }} style={s.clearBtn}>Clear</button>
+            <span style={s.resultCount}>
+              {flights.filter(f => {
+                const q = flightSearch.toLowerCase();
+                const matchSearch = !q || f.flight_number.toLowerCase().includes(q) || f.origin_code?.toLowerCase().includes(q) || f.dest_code?.toLowerCase().includes(q);
+                const matchStatus = flightStatusFilter === 'all' || f.status === flightStatusFilter;
+                return matchSearch && matchStatus;
+              }).length} results
+            </span>
           </div>
           {showFlightForm && (
             <form onSubmit={handleCreateFlight} style={s.flightForm}>
@@ -141,7 +178,12 @@ const AdminDashboard = () => {
           <table style={s.table}>
             <thead><tr style={s.thead}>{['Flight','Route','Departure','Economy','Business','Seats','Status','Action'].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
             <tbody>
-              {flights.map(f => (
+              {flights.filter(f => {
+                const q = flightSearch.toLowerCase();
+                const matchSearch = !q || f.flight_number.toLowerCase().includes(q) || f.origin_code?.toLowerCase().includes(q) || f.dest_code?.toLowerCase().includes(q);
+                const matchStatus = flightStatusFilter === 'all' || f.status === flightStatusFilter;
+                return matchSearch && matchStatus;
+              }).map(f => (
                 <tr key={f.id} style={s.tr}>
                   <td style={s.td}><strong>{f.flight_number}</strong></td>
                   <td style={s.td}>{f.origin_code} to {f.dest_code}</td>
@@ -210,6 +252,48 @@ const AdminDashboard = () => {
           </table>
         </div>
       )}
+      {tab === 'refunds' && (
+        <div style={s.section}>
+          <h3 style={s.sectionTitle}>Refund Management ({refunds.length} total)</h3>
+          {refunds.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: '#888' }}>No refund requests found.</div>
+          ) : (
+            <table style={s.table}>
+              <thead><tr style={s.thead}>{['Booking Ref','Passenger','Amount','Reason','Status','Requested','Actions'].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
+              <tbody>
+                {refunds.map(r => (
+                  <tr key={r.id} style={s.tr}>
+                    <td style={s.td}><strong style={{ color: '#003580' }}>{r.booking_reference}</strong></td>
+                    <td style={s.td}>{r.first_name} {r.last_name}<br/><span style={{ fontSize: '0.8rem', color: '#888' }}>{r.email}</span></td>
+                    <td style={s.td}><strong style={{ color: '#28a745' }}>{r.currency} {r.amount}</strong></td>
+                    <td style={s.td}>{r.reason}</td>
+                    <td style={s.td}>
+                      <span style={{ ...s.statusBadge, background: r.status === 'approved' ? '#28a745' : r.status === 'rejected' ? '#dc3545' : r.status === 'processed' ? '#17a2b8' : '#ffc107' }}>
+                        {r.status}
+                      </span>
+                    </td>
+                    <td style={s.td}>{new Date(r.created_at).toLocaleDateString()}</td>
+                    <td style={s.td}>
+                      {r.status === 'pending' && (
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button onClick={() => handleProcessRefund(r.id, 'approved')} style={{ ...s.actionBtn, background: '#28a745' }}>Approve</button>
+                          <button onClick={() => handleProcessRefund(r.id, 'rejected')} style={{ ...s.actionBtn, background: '#dc3545' }}>Reject</button>
+                        </div>
+                      )}
+                      {r.status === 'approved' && (
+                        <button onClick={() => handleProcessRefund(r.id, 'processed')} style={{ ...s.actionBtn, background: '#17a2b8' }}>Mark Processed</button>
+                      )}
+                      {['rejected','processed'].includes(r.status) && (
+                        <span style={{ color: '#888', fontSize: '0.85rem' }}>{r.processed_at ? new Date(r.processed_at).toLocaleDateString() : '-'}</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -241,6 +325,11 @@ const s = {
   label: { fontWeight: '600', color: '#333', fontSize: '0.85rem' },
   input: { padding: '0.6rem', border: '1px solid #ddd', borderRadius: '6px', fontSize: '0.9rem', boxSizing: 'border-box', width: '100%' },
   actionBtn: { color: '#fff', border: 'none', padding: '0.3rem 0.75rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' },
+  searchBar: { display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', padding: '1rem', background: '#f8faff', borderRadius: '8px' },
+  searchInput: { flex: 1, minWidth: '250px', padding: '0.6rem 1rem', border: '1.5px solid #ddd', borderRadius: '8px', fontSize: '0.9rem', outline: 'none' },
+  filterSelect: { padding: '0.6rem', border: '1.5px solid #ddd', borderRadius: '8px', fontSize: '0.9rem', outline: 'none', background: '#fff' },
+  clearBtn: { padding: '0.6rem 1rem', background: '#f5f5f5', border: '1px solid #ddd', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', color: '#666' },
+  resultCount: { color: '#888', fontSize: '0.85rem', whiteSpace: 'nowrap' },
 };
 
 export default AdminDashboard;
