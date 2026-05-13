@@ -558,7 +558,7 @@ npm start
 
 ## 👩‍💻 Developer
 
-**Name:** Sandrine  
+**Name:** UWIMBABAZI Sandrine  
 **Course:** SENG 8240 – Best Programming Practices and Design Patterns  
 **Institution:** Faculty of Information Technology, Department of Software Engineering  
 **Academic Year:** 2025/2026  
